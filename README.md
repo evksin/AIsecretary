@@ -24,3 +24,24 @@ uvicorn app.main:app --reload
 ```powershell
 Invoke-RestMethod -Method Get -Uri "http://127.0.0.1:8000/health"
 ```
+
+Проверка `POST /agent`:
+```powershell
+$body = @{
+    user_id = "telegram_123"
+    message = "Добавь задачу купить молоко"
+} | ConvertTo-Json
+
+Invoke-RestMethod -Method Post -Uri "http://127.0.0.1:8000/agent" -ContentType "application/json" -Body $body
+```
+
+Формат ошибок API (стабильный для интеграций):
+```json
+{
+  "error": {
+    "code": "validation_error|openai_error|database_error|internal_error",
+    "message": "Текст ошибки",
+    "details": "Дополнительные детали"
+  }
+}
+```

@@ -7,7 +7,7 @@ from collections.abc import Callable
 from json import JSONDecodeError
 from typing import Any
 
-from openai import OpenAI
+from openai import OpenAI, OpenAIError
 
 from app.tools.memory import save_memory, search_memory
 from app.tools.tasks import create_task, get_tasks
@@ -91,22 +91,22 @@ class AgentService:
 
     async def handle_message(self, user_id: str, message: str) -> str:
         logger.info("AgentService.handle_message called for user_id=%s", user_id)
-        try:
-            messages: list[dict[str, Any]] = [
-                {
-                    "role": "system",
-                    "content": (
-                        "You are an AI secretary. Use available functions when needed. "
-                        "When you answer, be concise and actionable."
-                    ),
-                },
-                {
-                    "role": "user",
-                    "content": f"user_id={user_id}\nmessage={message}",
-                },
-            ]
+        messages: list[dict[str, Any]] = [
+            {
+                "role": "system",
+                "content": (
+                    "You are an AI secretary. Use available functions when needed. "
+                    "When you answer, be concise and actionable."
+                ),
+            },
+            {
+                "role": "user",
+                "content": f"user_id={user_id}\nmessage={message}",
+            },
+        ]
 
-            for _ in range(5):
+        for _ in range(5):
+            try:
                 completion = self._client.chat.completions.create(
                     model=self._model,
                     messages=messages,
@@ -132,27 +132,28 @@ class AgentService:
                     }
                 )
 
-                tool_calls = assistant_message.tool_calls or []
-                if not tool_calls:
-                    return assistant_message.content or "Не удалось сформировать ответ."
+            except OpenAIError:
+                logger.exception("OpenAI request failed for user_id=%s", user_id)
+                raise
 
-                for call in tool_calls:
-                    tool_name = call.function.name
-                    tool_args = self._parse_tool_arguments(call.function.arguments)
-                    tool_result = self._run_tool(tool_name=tool_name, user_id=user_id, tool_args=tool_args)
-                    messages.append(
-                        {
-                            "role": "tool",
-                            "tool_call_id": call.id,
-                            "content": json.dumps(tool_result, ensure_ascii=False),
-                        }
-                    )
+            tool_calls = assistant_message.tool_calls or []
+            if not tool_calls:
+                return assistant_message.content or "Не удалось сформировать ответ."
 
-            logger.warning("Agent loop reached max iterations for user_id=%s", user_id)
-            return "Я выполнил все шаги, но не смог завершить ответ. Попробуйте переформулировать запрос."
-        except Exception:
-            logger.exception("AgentService failed for user_id=%s", user_id)
-            return "Произошла ошибка при обработке сообщения. Попробуйте еще раз."
+            for call in tool_calls:
+                tool_name = call.function.name
+                tool_args = self._parse_tool_arguments(call.function.arguments)
+                tool_result = self._run_tool(tool_name=tool_name, user_id=user_id, tool_args=tool_args)
+                messages.append(
+                    {
+                        "role": "tool",
+                        "tool_call_id": call.id,
+                        "content": json.dumps(tool_result, ensure_ascii=False),
+                    }
+                )
+
+        logger.warning("Agent loop reached max iterations for user_id=%s", user_id)
+        return "Я выполнил все шаги, но не смог завершить ответ. Попробуйте переформулировать запрос."
 
 
     def _parse_tool_arguments(self, raw_arguments: str) -> dict[str, Any]:
