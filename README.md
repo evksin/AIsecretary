@@ -15,6 +15,7 @@
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install fastapi uvicorn sqlalchemy psycopg2-binary
+$env:DATABASE_URL = "postgresql+psycopg2://postgres:postgres@localhost:5432/ai_secretary"
 uvicorn app.main:app --reload
 ```
 
