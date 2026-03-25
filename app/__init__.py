@@ -1,0 +1,2 @@
+"""AI Secretary application package."""
+
