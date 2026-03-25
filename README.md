@@ -14,8 +14,9 @@
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
-pip install fastapi uvicorn sqlalchemy psycopg2-binary
+pip install fastapi uvicorn sqlalchemy psycopg2-binary openai
 $env:DATABASE_URL = "postgresql+psycopg2://postgres:postgres@localhost:5432/ai_secretary"
+$env:OPENAI_API_KEY = "your_openai_api_key"
 uvicorn app.main:app --reload
 ```
 
