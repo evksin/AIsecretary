@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 DATABASE_URL: str = os.getenv(
     "DATABASE_URL",
-    "postgresql+psycopg2://postgres:postgres@localhost:5432/ai_secretary",
+    "sqlite:///./ai_secretary.db",
 )
 
 engine: Engine = create_engine(
@@ -25,6 +25,11 @@ engine: Engine = create_engine(
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False, class_=Session)
 
 logger.info("Database engine initialized for %s", DATABASE_URL)
+if DATABASE_URL.startswith("sqlite"):
+    logger.warning(
+        "SQLite is enabled for local development. "
+        "Set DATABASE_URL to PostgreSQL in production."
+    )
 
 
 def get_db() -> Generator[Session, None, None]:

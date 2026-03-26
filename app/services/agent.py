@@ -20,7 +20,6 @@ class AgentService:
 
     def __init__(self) -> None:
         self._model = os.getenv("OPENAI_MODEL", "gpt-4.1-mini")
-        self._client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
         self._tool_handlers: dict[str, Callable[..., dict[str, Any]]] = {
             "create_task": create_task,
             "get_tasks": get_tasks,
@@ -107,7 +106,7 @@ class AgentService:
 
         for _ in range(5):
             try:
-                completion = self._client.chat.completions.create(
+                completion = self._get_client().chat.completions.create(
                     model=self._model,
                     messages=messages,
                     tools=self._tools,
@@ -154,6 +153,9 @@ class AgentService:
 
         logger.warning("Agent loop reached max iterations for user_id=%s", user_id)
         return "Я выполнил все шаги, но не смог завершить ответ. Попробуйте переформулировать запрос."
+
+    def _get_client(self) -> OpenAI:
+        return OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 
     def _parse_tool_arguments(self, raw_arguments: str) -> dict[str, Any]:
